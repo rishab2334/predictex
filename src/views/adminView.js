@@ -186,7 +186,15 @@ const AdminView = (() => {
     });
     setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
   }
-  function toggleUser(id, st) { _do(() => Api.admin.patchUser(id, { status: st === 'active' ? 'suspended' : 'active' })); }
+  async function toggleUser(id, st) {
+    const newStatus = st === 'active' ? 'suspended' : 'active';
+    try {
+      const result = await Api.admin.patchUser(id, { status: newStatus });
+      if (result.closedPositions) Toast.show(`Suspended — ${result.closedPositions.closed} position(s) closed, $${result.closedPositions.totalProceeds.toFixed(2)} returned to balance.`, 'success');
+      else Toast.show(newStatus === 'suspended' ? 'User suspended.' : 'User activated.', 'success');
+      _load();
+    } catch (e) { Toast.show(e.message, 'error'); }
+  }
   function toggleClient(id, st) { _do(() => Api.admin.patchClient(id, { status: st === 'active' ? 'suspended' : 'active' })); }
   function resetClientPw(id) {
     Modal.show('Reset password', '<div class="form-group"><label class="form-label">New password (min 6)</label><input class="form-input" type="password" id="modal-input" placeholder="min 6 characters"></div>', () => {

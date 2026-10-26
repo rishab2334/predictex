@@ -121,6 +121,10 @@ function doDebit(req, res) {
 function doPatchUser(req, res) {
   const b = req.body || {};
   let u = req.target;
+  let closedPositions = null;
+  if (b.status === 'suspended' && u.status !== 'suspended') {
+    closedPositions = repo.closeAllPositions(u.id, req.userId, req.role);
+  }
   if (b.status === 'active' || b.status === 'suspended') u = repo.setStatus(u.id, b.status);
   if (b.commission_rate != null) {
     const r = Number(b.commission_rate);
@@ -134,7 +138,9 @@ function doPatchUser(req, res) {
   if (b.allowed_categories !== undefined) {
     u = repo.setCategories(u.id, Array.isArray(b.allowed_categories) ? b.allowed_categories : null);
   }
-  res.json(sessionUser(u));
+  const result = sessionUser(u);
+  if (closedPositions && closedPositions.closed > 0) result.closedPositions = closedPositions;
+  res.json(result);
 }
 function doResolveWithdrawal(req, res, approve) {
   const w = repo.getWithdrawal(Number(req.params.id));

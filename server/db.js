@@ -184,6 +184,36 @@ const repo = {
     return q.userById.get(id);
   },
   setStatus:     (id, status) => { q.setStatus.run({ id, status }); return q.userById.get(id); },
+
+  closeAllPositions(userId, actorId, actorRole) {
+    const now = Date.now();
+    return db.transaction(() => {
+      const positions = q.posByUser.all(userId);
+      if (!positions.length) return { closed: 0, totalProceeds: 0, totalPnl: 0 };
+      const acct = q.account.get(userId);
+      let balance = acct.balance;
+      let portfolioValue = acct.portfolio_value;
+      let totalProceeds = 0;
+      let totalPnl = 0;
+      for (const p of positions) {
+        const m = q.market.get(p.ticker);
+        const currentPrice = m ? (p.side === 'YES' ? m.yes_price : m.no_price) : p.current_price;
+        const proceeds = round2(currentPrice * p.quantity / 100);
+        const costBasis = round2(p.avg_price * p.quantity / 100);
+        const pnl = round2(proceeds - costBasis);
+        balance = round2(balance + proceeds);
+        portfolioValue = +Math.max(0, portfolioValue - costBasis).toFixed(2);
+        totalProceeds = round2(totalProceeds + proceeds);
+        totalPnl = round2(totalPnl + pnl);
+        q.insLedger.run({ user_id: userId, type: 'position_close', amount: proceeds, balance_after: balance, ref: p.ticker, actor_id: actorId, actor_role: actorRole, created_at: now });
+        q.insFill.run({ user_id: userId, action: 'Close ' + p.side, title: p.title, ticker: p.ticker, price: currentPrice, qty: p.quantity, cost: -proceeds, pnl, status: 'closed', created_at: now });
+        q.delPosById.run(p.id);
+      }
+      q.setAccount.run({ user_id: userId, balance, portfolio_value: portfolioValue });
+      q.bumpPnl.run(totalPnl, userId);
+      return { closed: positions.length, totalProceeds, totalPnl };
+    })();
+  },
   setCommission: (id, rate)   => { q.setCommission.run({ id, rate: Number(rate) || 0 }); return q.userById.get(id); },
   setPassword:   (id, hash)   => { q.setPassword.run({ id, hash }); return q.userById.get(id); },
   setCategories: (id, cats)   => { q.setCategories.run({ id, cats: Array.isArray(cats) && cats.length ? JSON.stringify(cats) : null }); return q.userById.get(id); },

@@ -183,7 +183,15 @@ const ClientView = (() => {
       PortfolioModal.show(data);
     } catch (e) { Toast.show(e.message, 'error'); }
   }
-  function toggleUser(id, st) { _do(() => Api.client.patchUser(id, { status: st === 'active' ? 'suspended' : 'active' })); }
+  async function toggleUser(id, st) {
+    const newStatus = st === 'active' ? 'suspended' : 'active';
+    try {
+      const result = await Api.client.patchUser(id, { status: newStatus });
+      if (result.closedPositions) Toast.show(`Suspended — ${result.closedPositions.closed} position(s) closed, $${result.closedPositions.totalProceeds.toFixed(2)} returned to balance.`, 'success');
+      else Toast.show(newStatus === 'suspended' ? 'User suspended.' : 'User activated.', 'success');
+      _load();
+    } catch (e) { Toast.show(e.message, 'error'); }
+  }
   function approve(id) { _do(() => Api.client.approve(id), 'Approved.'); }
   function reject(id) { _do(() => Api.client.reject(id), 'Rejected.'); }
 
