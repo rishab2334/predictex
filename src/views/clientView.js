@@ -66,6 +66,7 @@ const ClientView = (() => {
           <td>${_catsLabel(u)}</td>
           <td><span class="st st-${u.status}">${u.status}</span></td>
           <td class="row-actions">
+            <button onclick="ClientView.viewPortfolio('${u.id}')">Portfolio</button>
             <button onclick="ClientView.credit('${u.id}')">Credit</button>
             <button class="danger" onclick="ClientView.debit('${u.id}')">Debit</button>
             <button onclick="ClientView.setComm('${u.id}',${u.commission_rate})">Comm</button>
@@ -176,9 +177,15 @@ const ClientView = (() => {
     });
     setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
   }
+  async function viewPortfolio(id) {
+    try {
+      const data = await Api.client.portfolio(id);
+      PortfolioModal.show(data);
+    } catch (e) { Toast.show(e.message, 'error'); }
+  }
   function toggleUser(id, st) { _do(() => Api.client.patchUser(id, { status: st === 'active' ? 'suspended' : 'active' })); }
   function approve(id) { _do(() => Api.client.approve(id), 'Approved.'); }
   function reject(id) { _do(() => Api.client.reject(id), 'Rejected.'); }
 
-  return { render, mount, tab, createUser, toggleAllCats, editCats, credit, debit, setComm, resetPw, toggleUser, approve, reject };
+  return { render, mount, tab, createUser, toggleAllCats, viewPortfolio, editCats, credit, debit, setComm, resetPw, toggleUser, approve, reject };
 })();

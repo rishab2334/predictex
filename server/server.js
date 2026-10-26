@@ -96,6 +96,16 @@ function loadTargetUser(req, res, next) {
   req.target = t;
   next();
 }
+function doGetPortfolio(req, res) {
+  const positions = repo.positions(req.target.id).map(p => {
+    const m = repo.getMarket(p.ticker);
+    const current = m ? (p.side === 'YES' ? m.yes_price : m.no_price) : p.current_price;
+    return publicPosition({ ...p, current_price: current });
+  });
+  const acct = repo.account(req.target.id);
+  const fills = repo.fills(req.target.id).map(publicFill);
+  res.json({ user: sessionUser(req.target), account: acct ? publicAccount(acct) : null, positions, activity: fills });
+}
 function doCredit(req, res) {
   const amt = round2(req.body && req.body.amount);
   if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Enter a valid amount.' });
@@ -152,6 +162,7 @@ app.post('/api/admin/users', requireAuth, requireRole('system_admin'), (req, res
   if (!c || c.role !== 'client') return res.status(400).json({ error: 'Valid client_id required.' });
   createUserRow(res, req.body, clientId, { id: req.userId, role: 'system_admin' });
 });
+app.get('/api/admin/users/:id/portfolio', requireAuth, requireRole('system_admin'), loadTargetUser, doGetPortfolio);
 app.post('/api/admin/users/:id/credit', requireAuth, requireRole('system_admin'), loadTargetUser, doCredit);
 app.post('/api/admin/users/:id/debit', requireAuth, requireRole('system_admin'), loadTargetUser, doDebit);
 app.patch('/api/admin/users/:id', requireAuth, requireRole('system_admin'), loadTargetUser, doPatchUser);
@@ -163,6 +174,7 @@ app.get('/api/admin/reports', requireAuth, requireRole('system_admin'), (req, re
 // ── Client routes (tenant-scoped to req.userId) ──────────────────────────────
 app.get('/api/client/users', requireAuth, requireRole('client'), (req, res) => res.json(repo.listUsers(req.userId).map(managedUser)));
 app.post('/api/client/users', requireAuth, requireRole('client'), (req, res) => createUserRow(res, req.body, req.userId, { id: req.userId, role: 'client' }));
+app.get('/api/client/users/:id/portfolio', requireAuth, requireRole('client'), loadTargetUser, doGetPortfolio);
 app.post('/api/client/users/:id/credit', requireAuth, requireRole('client'), loadTargetUser, doCredit);
 app.post('/api/client/users/:id/debit', requireAuth, requireRole('client'), loadTargetUser, doDebit);
 app.patch('/api/client/users/:id', requireAuth, requireRole('client'), loadTargetUser, doPatchUser);

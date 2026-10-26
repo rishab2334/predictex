@@ -95,6 +95,7 @@ const AdminView = (() => {
           <td>${_catsLabel(u)}</td>
           <td><span class="st st-${u.status}">${u.status}</span></td>
           <td class="row-actions">
+            <button onclick="AdminView.viewPortfolio('${u.id}')">Portfolio</button>
             <button onclick="AdminView.credit('${u.id}')">Credit</button>
             <button class="danger" onclick="AdminView.debit('${u.id}')">Debit</button>
             <button onclick="AdminView.setComm('${u.id}',${u.commission_rate})">Comm</button>
@@ -213,8 +214,14 @@ const AdminView = (() => {
       });
     });
   }
+  async function viewPortfolio(id) {
+    try {
+      const data = await Api.admin.portfolio(id);
+      PortfolioModal.show(data);
+    } catch (e) { Toast.show(e.message, 'error'); }
+  }
   function approve(id) { _do(() => Api.admin.approve(id), 'Approved.'); }
   function reject(id) { _do(() => Api.admin.reject(id), 'Rejected.'); }
 
-  return { render, mount, tab, createClient, createUser, toggleAllCats, credit, debit, setComm, editCats, toggleUser, toggleClient, resetClientPw, approve, reject };
+  return { render, mount, tab, createClient, createUser, toggleAllCats, viewPortfolio, credit, debit, setComm, editCats, toggleUser, toggleClient, resetClientPw, approve, reject };
 })();

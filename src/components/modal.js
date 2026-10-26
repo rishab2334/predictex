@@ -156,7 +156,7 @@ const Modal = (() => {
   }
 
   let _confirmCb = null;
-  function show(title, bodyHtml, onConfirm) {
+  function show(title, bodyHtml, onConfirm, btnLabel) {
     _confirmCb = onConfirm;
     _open(`
       <div class="modal-header">
@@ -164,7 +164,7 @@ const Modal = (() => {
         <button class="modal-close-btn" onclick="Modal.close()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
       <div class="modal-body-content" onkeydown="if(event.key==='Enter')Modal.confirmAction()">${bodyHtml}</div>
-      <button class="btn btn-primary modal-submit-btn" onclick="Modal.confirmAction()">Save</button>`);
+      <button class="btn btn-primary modal-submit-btn" onclick="Modal.confirmAction()">${btnLabel || 'Save'}</button>`);
   }
   function confirmAction() {
     if (_confirmCb) {

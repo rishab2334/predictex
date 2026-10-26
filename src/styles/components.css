@@ -1263,6 +1263,20 @@
 .cat-check input:disabled + span { color: var(--text-muted); }
 .cat-tag { display: inline-block; font-size: 10px; font-weight: 600; font-family: var(--font-display); letter-spacing: 0.03em; text-transform: uppercase; padding: 2px 6px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
 
+/* ── Portfolio modal ── */
+.modal-box:has(.portfolio-modal) { max-width: 680px; }
+.portfolio-modal { max-height: 60vh; overflow-y: auto; }
+.portfolio-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.portfolio-stat { background: var(--surface-1); border: 1px solid var(--border); padding: 10px 12px; }
+.portfolio-stat-label { display: block; font-size: 10px; font-weight: 600; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 4px; }
+.portfolio-stat-value { display: block; font-size: 16px; font-weight: 700; font-family: var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.portfolio-section-title { font-size: 12px; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin: 14px 0 8px; }
+.portfolio-table-wrap { overflow-x: auto; }
+.portfolio-table-wrap .dash-tbl { font-size: 12px; }
+@media (max-width: 520px) {
+  .portfolio-summary { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── Report card grid ── */
 .report-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
 .report-cards .metric-value { font-size: 20px; }
