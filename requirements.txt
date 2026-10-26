@@ -1,0 +1,2 @@
+# Python dependencies (optional — only needed for Kalshi proxy)
+curl_cffi>=0.5.0
