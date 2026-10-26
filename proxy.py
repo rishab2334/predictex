@@ -9,13 +9,6 @@ import sys, json, time, threading, traceback, gzip as gz
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib import request as urllib_req, error as urllib_err
 
-for p in [
-    '/Users/rishabjain/Library/Python/3.9/lib/python/site-packages',
-    '/usr/local/lib/python3.9/site-packages',
-]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
 try:
     from curl_cffi import requests as cr
     HAS_CURL = True
