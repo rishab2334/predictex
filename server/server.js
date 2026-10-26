@@ -15,7 +15,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 
 const { repo, DB_PATH, round2 } = require('./db');
-const { hashPassword, verifyPassword, signToken, requireAuth, requireRole } = require('./auth');
+const { hashPassword, verifyPassword, signToken, requireAuth, optionalAuth, requireRole } = require('./auth');
 const { startIngest } = require('./ingest');
 const { startSettlement } = require('./settle');
 const orderBook = require('./orderBook');
@@ -41,7 +41,7 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 // ── Mappers ──────────────────────────────────────────────────────────────────
-const sessionUser = (u) => ({ id: u.id, username: u.username, name: u.name, role: u.role, client_id: u.client_id, status: u.status, commission_rate: u.commission_rate, color: u.color, joinedAt: u.created_at });
+const sessionUser = (u) => ({ id: u.id, username: u.username, name: u.name, role: u.role, client_id: u.client_id, status: u.status, commission_rate: u.commission_rate, color: u.color, allowed_categories: u.allowed_categories ? JSON.parse(u.allowed_categories) : null, joinedAt: u.created_at });
 const managedUser = (u) => ({ ...sessionUser(u), balance: u.balance != null ? u.balance : undefined });
 const publicAccount = (a) => ({ balance: a.balance, portfolioValue: a.portfolio_value, weekPnl: a.week_pnl, allTimePnl: a.all_time_pnl, winRate: a.win_rate });
 const publicPosition = (p) => ({ ticker: p.ticker, title: p.title, series: p.series, side: p.side, avg_price: p.avg_price, current_price: p.current_price, quantity: p.quantity });
@@ -78,13 +78,14 @@ function createUserRow(res, body, clientId, actor) {
   const { username, name, password } = body || {};
   const deposit = round2(body && body.deposit || 0);
   const commission_rate = Number(body && body.commission_rate) || 0;
+  const allowed_categories = Array.isArray(body && body.allowed_categories) ? body.allowed_categories : null;
   if (!username || !password) return res.status(400).json({ error: 'User id and password are required.' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   if (commission_rate < 0 || commission_rate > 100) return res.status(400).json({ error: 'Commission rate must be 0–100%.' });
   if (deposit < 0) return res.status(400).json({ error: 'Deposit cannot be negative.' });
   if (!clientId) return res.status(400).json({ error: 'A client must be specified.' });
   if (repo.userByUsername(username)) return res.status(409).json({ error: 'That user id is already taken.' });
-  const u = repo.createUser({ id: genId(), username, name: name || username, password_hash: hashPassword(password), color: colorFor(username), client_id: clientId, commission_rate, deposit, actorId: actor.id, actorRole: actor.role });
+  const u = repo.createUser({ id: genId(), username, name: name || username, password_hash: hashPassword(password), color: colorFor(username), client_id: clientId, commission_rate, deposit, allowed_categories, actorId: actor.id, actorRole: actor.role });
   res.json(managedUser({ ...u, balance: deposit }));
 }
 // Loads req.params.id as a target USER and enforces tenant ownership for clients.
@@ -119,6 +120,9 @@ function doPatchUser(req, res) {
   if (b.password) {
     if (String(b.password).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     u = repo.setPassword(u.id, hashPassword(b.password));
+  }
+  if (b.allowed_categories !== undefined) {
+    u = repo.setCategories(u.id, Array.isArray(b.allowed_categories) ? b.allowed_categories : null);
   }
   res.json(sessionUser(u));
 }
@@ -167,8 +171,19 @@ app.post('/api/client/withdrawals/:id/approve', requireAuth, requireRole('client
 app.post('/api/client/withdrawals/:id/reject', requireAuth, requireRole('client'), (req, res) => doResolveWithdrawal(req, res, false));
 app.get('/api/client/reports', requireAuth, requireRole('client'), (req, res) => res.json(repo.clientReport(req.userId)));
 
-// ── Markets (public) ─────────────────────────────────────────────────────────
-app.get('/api/markets', (req, res) => res.json(repo.listMarkets().map(publicMarket)));
+// ── Markets (public, filtered by user's allowed categories when authenticated)
+function userAllowedCategories(userId) {
+  if (!userId) return null;
+  const u = repo.userById(userId);
+  if (!u || u.role !== 'user' || !u.allowed_categories) return null;
+  try { return JSON.parse(u.allowed_categories); } catch { return null; }
+}
+app.get('/api/markets', optionalAuth, (req, res) => {
+  let markets = repo.listMarkets().map(publicMarket);
+  const cats = userAllowedCategories(req.userId);
+  if (cats) markets = markets.filter(m => cats.includes(m.category));
+  res.json(markets);
+});
 app.get('/api/markets/:ticker', (req, res) => { const m = repo.getMarket(req.params.ticker); if (!m) return res.status(404).json({ error: 'Market not found.' }); res.json(publicMarket(m)); });
 app.get('/api/markets/:ticker/book', (req, res) => { const m = repo.getMarket(req.params.ticker); if (!m) return res.status(404).json({ error: 'Market not found.' }); res.json(orderBook.snapshot(m.ticker, m.yes_price)); });
 
@@ -194,8 +209,10 @@ app.post('/api/orders', requireAuth, requireRole('user'), (req, res) => {
   const market = repo.getMarket(ticker);
   if (!market) return res.status(404).json({ error: 'Market not found.' });
 
+  const cats = userAllowedCategories(req.userId);
+  if (cats && !cats.includes(market.category)) return res.status(403).json({ error: 'You do not have access to this market category.' });
+
   const mid = clamp(side === 'YES' ? market.yes_price : market.no_price, 1, 99);
-  // Accept an explicit spend `amount`, or fall back to qty×mid for older callers.
   let gross = req.body && req.body.amount != null ? round2(req.body.amount)
             : req.body && req.body.qty != null ? round2(parseInt(req.body.qty, 10) * mid / 100) : NaN;
   if (!Number.isFinite(gross) || gross <= 0) return res.status(400).json({ error: 'Enter an amount to spend.' });

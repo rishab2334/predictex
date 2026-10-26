@@ -1254,6 +1254,15 @@
 .row-actions .danger:hover { border-color: var(--fill-danger); color: var(--text-danger); }
 .dash-empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 13px; }
 
+/* ── Category access (create-user forms) ── */
+.category-access { margin-top: 10px; }
+.category-access-label { font-size: 12px; font-weight: 600; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+.category-checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.cat-check { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-primary); cursor: pointer; }
+.cat-check input { accent-color: var(--fill-accent); }
+.cat-check input:disabled + span { color: var(--text-muted); }
+.cat-tag { display: inline-block; font-size: 10px; font-weight: 600; font-family: var(--font-display); letter-spacing: 0.03em; text-transform: uppercase; padding: 2px 6px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
+
 /* ── Report card grid ── */
 .report-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
 .report-cards .metric-value { font-size: 20px; }

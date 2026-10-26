@@ -155,5 +155,24 @@ const Modal = (() => {
     } catch (e) { Toast.show(e.message, 'error'); } finally { _setBusy(false); }
   }
 
-  return { close, showLogin, showSignup, showDeposit, selectDeposit, submitLogin, submitSignup, submitDeposit };
+  let _confirmCb = null;
+  function show(title, bodyHtml, onConfirm) {
+    _confirmCb = onConfirm;
+    _open(`
+      <div class="modal-header">
+        <h3 class="modal-header-title">${title}</h3>
+        <button class="modal-close-btn" onclick="Modal.close()" aria-label="Close"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body-content" onkeydown="if(event.key==='Enter')Modal.confirmAction()">${bodyHtml}</div>
+      <button class="btn btn-primary modal-submit-btn" onclick="Modal.confirmAction()">Save</button>`);
+  }
+  function confirmAction() {
+    if (_confirmCb) {
+      const result = _confirmCb();
+      if (result === false) return;
+    }
+    close();
+  }
+
+  return { close, show, confirmAction, showLogin, showSignup, showDeposit, selectDeposit, submitLogin, submitSignup, submitDeposit };
 })();
