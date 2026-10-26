@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Predictex — Trade on real-world events. Buy YES or NO contracts on politics, economics, sports, crypto, and more." />
+  <title>Predictex — Prediction Markets</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>" />
+  <link rel="stylesheet" href="src/styles/reset.css?v=2000000017" />
+  <link rel="stylesheet" href="src/styles/theme.css?v=2000000017" />
+  <link rel="stylesheet" href="src/styles/components.css?v=2000000017" />
+  <link rel="stylesheet" href="src/styles/layout.css?v=2000000017" />
+  <!-- Fonts: Archivo (labels/numbers) + Hanken Grotesk (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" />
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast-container"></div>
+  <div id="modal-overlay"></div>
+
+  <!-- ── Core (config + utilities + state) ── -->
+  <script src="src/core/config.js?v=2000000017"></script>
+  <script src="src/core/utils.js?v=2000000017"></script>
+  <script src="src/core/store.js?v=2000000017"></script>
+
+  <!-- ── Data (seed / fallback) ── -->
+  <script src="src/data/seed.js?v=2000000017"></script>
+
+  <!-- ── Services (domain logic) ── -->
+  <script src="src/services/marketService.js?v=2000000017"></script>
+  <script src="src/services/orderBookService.js?v=2000000017"></script>
+  <script src="src/services/tradeService.js?v=2000000017"></script>
+  <script src="src/services/authService.js?v=2000000017"></script>
+
+  <!-- ── Api gateway (Local / Remote adapters — the backend seam) ── -->
+  <script src="src/core/api.js?v=2000000017"></script>
+
+  <!-- ── Components (reusable UI) ── -->
+  <script src="src/components/toast.js?v=2000000017"></script>
+  <script src="src/components/modal.js?v=2000000017"></script>
+  <script src="src/components/marketCard.js?v=2000000017"></script>
+  <script src="src/components/orderBook.js?v=2000000017"></script>
+  <script src="src/components/priceChart.js?v=2000000017"></script>
+  <script src="src/components/tradePanel.js?v=2000000017"></script>
+  <script src="src/components/navbar.js?v=2000000017"></script>
+
+  <!-- ── Views (pages) ── -->
+  <script src="src/views/authView.js?v=2000000017"></script>
+  <script src="src/views/adminView.js?v=2000000017"></script>
+  <script src="src/views/clientView.js?v=2000000017"></script>
+  <script src="src/views/homeView.js?v=2000000017"></script>
+  <script src="src/views/detailView.js?v=2000000017"></script>
+  <script src="src/views/portfolioView.js?v=2000000017"></script>
+  <script src="src/views/activityView.js?v=2000000017"></script>
+
+  <!-- ── Router + facade ── -->
+  <script src="src/core/router.js?v=2000000017"></script>
+  <script src="src/core/app.js?v=2000000017"></script>
+
+  <!-- ── Bootstrap (must be last) ── -->
+  <script src="src/main.js?v=2000000017"></script>
+</body>
+</html>

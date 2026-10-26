@@ -1,0 +1,67 @@
+/* ── Light theme only ── */
+:root {
+  /* Surfaces — warm off-white */
+  --surface-0: #f5f4f0;
+  --surface-1: #eceae6;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+
+  /* Text — warm near-black */
+  --text-primary:   #1a1a18;
+  --text-secondary: #5c5b56;
+  --text-muted:     #908e88;
+  --text-disabled:  #c4c2bc;
+
+  /* Accent — deep teal */
+  --text-accent:   #0c6e6b;
+  --bg-accent:     #e6f2f1;
+  --border-accent: #0c6e6b;
+  --fill-accent:   #0c6e6b;
+
+  /* Success / YES — deep teal */
+  --text-success:   #0c6e6b;
+  --bg-success:     #e6f2f1;
+  --border-success: #0c6e6b;
+  --fill-success:   #0c6e6b;
+
+  /* Danger / NO — burnt orange */
+  --text-danger:   #c2410c;
+  --bg-danger:     #fef0e6;
+  --border-danger: #c2410c;
+  --fill-danger:   #c2410c;
+
+  /* Warning (amber) */
+  --text-warning:   #92400e;
+  --bg-warning:     #fef3c7;
+  --border-warning: #d97706;
+  --fill-warning:   #b45309;
+
+  /* Borders — hairline */
+  --border:         #dddbd6;
+  --border-strong:  #ccc9c3;
+  --border-stronger:#b3b0a9;
+
+  /* Radius — square corners */
+  --radius:    0px;
+  --radius-lg: 0px;
+
+  /* Spacing */
+  --pad-sm:   8px;
+  --pad-md:   18px;
+  --pad-lg:   28px;
+  --gap-xs:   4px;
+  --gap-sm:   8px;
+  --gap-md:   14px;
+  --gap-lg:   24px;
+
+  /* Shadows — minimal */
+  --shadow-sm: none;
+  --shadow-md: 0 1px 4px rgba(0,0,0,0.05);
+
+  /* Nav */
+  --nav-height: 54px;
+
+  /* Font families */
+  --font-display: 'Archivo', 'Arial Black', sans-serif;
+  --font-body: 'Hanken Grotesk', 'Helvetica Neue', Helvetica, sans-serif;
+}
