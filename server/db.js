@@ -92,6 +92,7 @@ ensureColumns('users', [
   ['client_id', 'client_id TEXT'],
   ['status', "status TEXT NOT NULL DEFAULT 'active'"],
   ['commission_rate', 'commission_rate REAL NOT NULL DEFAULT 0'],
+  ['allowed_categories', 'allowed_categories TEXT'],
 ]);
 ensureColumns('ledger', [['actor_id', 'actor_id TEXT'], ['actor_role', 'actor_role TEXT']]);
 db.exec(`UPDATE users SET username = COALESCE(username, email, id) WHERE username IS NULL`);
@@ -99,8 +100,8 @@ db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)
 
 // ── Prepared statements ──────────────────────────────────────────────────────
 const q = {
-  insUser:      db.prepare(`INSERT INTO users (id,username,name,email,password_hash,role,client_id,status,commission_rate,color,created_at)
-                            VALUES (@id,@username,@name,@email,@password_hash,@role,@client_id,@status,@commission_rate,@color,@created_at)`),
+  insUser:      db.prepare(`INSERT INTO users (id,username,name,email,password_hash,role,client_id,status,commission_rate,color,allowed_categories,created_at)
+                            VALUES (@id,@username,@name,@email,@password_hash,@role,@client_id,@status,@commission_rate,@color,@allowed_categories,@created_at)`),
   userById:     db.prepare(`SELECT * FROM users WHERE id = ?`),
   userByName:   db.prepare(`SELECT * FROM users WHERE username = ?`),
   clients:      db.prepare(`SELECT * FROM users WHERE role='client' ORDER BY created_at DESC`),
@@ -109,6 +110,7 @@ const q = {
   setStatus:    db.prepare(`UPDATE users SET status=@status WHERE id=@id`),
   setCommission:db.prepare(`UPDATE users SET commission_rate=@rate WHERE id=@id`),
   setPassword:  db.prepare(`UPDATE users SET password_hash=@hash WHERE id=@id`),
+  setCategories:db.prepare(`UPDATE users SET allowed_categories=@cats WHERE id=@id`),
   updName:      db.prepare(`UPDATE users SET name=@name WHERE id=@id`),
   countRole:    db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role=?`),
 
@@ -159,18 +161,19 @@ const repo = {
   listUsers:   (clientId) => clientId ? q.usersByClient.all(clientId) : q.usersAll.all(),
 
   createClient({ id, username, name, password_hash, color }) {
-    q.insUser.run({ id, username, name, email: null, password_hash, role: 'client', client_id: null, status: 'active', commission_rate: 0, color, created_at: Date.now() });
+    q.insUser.run({ id, username, name, email: null, password_hash, role: 'client', client_id: null, status: 'active', commission_rate: 0, color, allowed_categories: null, created_at: Date.now() });
     return q.userById.get(id);
   },
   createSystemAdmin({ id, username, name, password_hash, color }) {
-    q.insUser.run({ id, username, name, email: null, password_hash, role: 'system_admin', client_id: null, status: 'active', commission_rate: 0, color, created_at: Date.now() });
+    q.insUser.run({ id, username, name, email: null, password_hash, role: 'system_admin', client_id: null, status: 'active', commission_rate: 0, color, allowed_categories: null, created_at: Date.now() });
     return q.userById.get(id);
   },
   /** Create a trading user under a client, with an optional opening deposit. */
-  createUser({ id, username, name, password_hash, color, client_id, commission_rate = 0, deposit = 0, actorId, actorRole }) {
+  createUser({ id, username, name, password_hash, color, client_id, commission_rate = 0, deposit = 0, allowed_categories = null, actorId, actorRole }) {
     const now = Date.now();
+    const cats = Array.isArray(allowed_categories) && allowed_categories.length ? JSON.stringify(allowed_categories) : null;
     const tx = db.transaction(() => {
-      q.insUser.run({ id, username, name, email: null, password_hash, role: 'user', client_id, status: 'active', commission_rate, color, created_at: now });
+      q.insUser.run({ id, username, name, email: null, password_hash, role: 'user', client_id, status: 'active', commission_rate, color, allowed_categories: cats, created_at: now });
       q.insAccount.run({ user_id: id });
       if (deposit > 0) {
         q.setBalance.run({ user_id: id, balance: round2(deposit) });
@@ -183,6 +186,7 @@ const repo = {
   setStatus:     (id, status) => { q.setStatus.run({ id, status }); return q.userById.get(id); },
   setCommission: (id, rate)   => { q.setCommission.run({ id, rate: Number(rate) || 0 }); return q.userById.get(id); },
   setPassword:   (id, hash)   => { q.setPassword.run({ id, hash }); return q.userById.get(id); },
+  setCategories: (id, cats)   => { q.setCategories.run({ id, cats: Array.isArray(cats) && cats.length ? JSON.stringify(cats) : null }); return q.userById.get(id); },
   updateName:    (id, name)   => { q.updName.run({ id, name }); return q.userById.get(id); },
 
   // ---- Wallet (manual money by admin/client) ----

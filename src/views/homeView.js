@@ -12,15 +12,22 @@ const HomeView = (() => {
     { value: 'price-low',  label: 'Lowest YES' },
   ];
 
+  function _userCategories(state) {
+    const s = state.session;
+    if (!s || s.role !== 'user' || !s.allowed_categories) return null;
+    return s.allowed_categories;
+  }
+
   function render(state) {
     const { filter, sort, search } = state.ui;
 
-    // First load over the network: show a skeleton until markets arrive.
     if (state.ui.loading && state.ui.loading.markets && MarketService.open().length === 0) {
       return _skeleton();
     }
 
     let markets = MarketService.open();
+    const allowedCats = _userCategories(state);
+    if (allowedCats) markets = markets.filter(m => allowedCats.includes(m.category));
 
     if (search) {
       const q = search.toLowerCase();
@@ -46,7 +53,7 @@ const HomeView = (() => {
     return `
       <div class="markets-toolbar">
         <div class="filter-group" id="home-filter-group">
-          ${CATEGORIES.map(c => {
+          ${CATEGORIES.filter(c => !allowedCats || c === 'All' || allowedCats.includes(c)).map(c => {
             const v = c.toLowerCase();
             return `<button class="filter-pill ${filter === v ? 'active' : ''}" onclick="App.setFilter('${v}')">${c}</button>`;
           }).join('')}

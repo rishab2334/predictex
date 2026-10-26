@@ -40,4 +40,12 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { hashPassword, verifyPassword, signToken, verifyToken, requireAuth, requireRole };
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const p = token && verifyToken(token);
+  if (p) { req.userId = p.sub; req.role = p.role; req.clientId = p.client_id; }
+  next();
+}
+
+module.exports = { hashPassword, verifyPassword, signToken, verifyToken, requireAuth, optionalAuth, requireRole };

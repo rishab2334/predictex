@@ -4,6 +4,7 @@
  */
 const AdminView = (() => {
   const esc = Utils.escapeHtml, money = Utils.money;
+  const ALL_CATEGORIES = ['Politics', 'Economics', 'Sports', 'Crypto', 'Weather', 'Technology', 'Entertainment'];
   let _tab = 'clients';
   let _clients = [];
 
@@ -68,22 +69,36 @@ const AdminView = (() => {
         <div class="fld"><label>Password</label><input id="u-pass" type="password" placeholder="min 6"></div>
         <div class="fld sm"><label>Deposit $</label><input id="u-dep" type="number" value="0" min="0"></div>
         <div class="fld xs"><label>Comm %</label><input id="u-comm" type="number" value="0" min="0" max="100"></div>
-        <button class="btn btn-primary" onclick="AdminView.createUser()">Create user</button>
       </div>
+      <div class="category-access">
+        <label class="category-access-label">Category access</label>
+        <div class="category-checks">
+          <label class="cat-check"><input type="checkbox" id="cat-all" checked onchange="AdminView.toggleAllCats(this.checked)"> <span>All categories</span></label>
+          ${ALL_CATEGORIES.map(c => `<label class="cat-check"><input type="checkbox" class="cat-box" value="${c}" checked disabled> <span>${c}</span></label>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:8px"><button class="btn btn-primary" onclick="AdminView.createUser()">Create user</button></div>
       ${_usersTable(users, true)}`;
   }
 
+  function _catsLabel(u) {
+    if (!u.allowed_categories) return '<span class="text-muted">All</span>';
+    const cats = u.allowed_categories;
+    return cats.map(c => `<span class="cat-tag">${esc(c)}</span>`).join(' ');
+  }
   function _usersTable(users, withClient) {
     const cmap = {}; _clients.forEach(c => cmap[c.id] = c.username);
     return `<div class="dash-section-title">Users (${users.length})</div>
-      ${users.length ? `<table class="dash-tbl"><thead><tr><th>User ID</th>${withClient ? '<th>Client</th>' : ''}<th>Balance</th><th>Comm</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      ${users.length ? `<table class="dash-tbl"><thead><tr><th>User ID</th>${withClient ? '<th>Client</th>' : ''}<th>Balance</th><th>Comm</th><th>Categories</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         ${users.map(u => `<tr><td><b>${esc(u.username)}</b></td>${withClient ? `<td>${esc(cmap[u.client_id] || '—')}</td>` : ''}
           <td class="tabular">${money(u.balance || 0)}</td><td>${u.commission_rate}%</td>
+          <td>${_catsLabel(u)}</td>
           <td><span class="st st-${u.status}">${u.status}</span></td>
           <td class="row-actions">
             <button onclick="AdminView.credit('${u.id}')">Credit</button>
             <button class="danger" onclick="AdminView.debit('${u.id}')">Debit</button>
             <button onclick="AdminView.setComm('${u.id}',${u.commission_rate})">Comm</button>
+            <button onclick="AdminView.editCats('${u.id}')">Cats</button>
             <button onclick="AdminView.toggleUser('${u.id}','${u.status}')">${u.status === 'active' ? 'Suspend' : 'Activate'}</button>
           </td></tr>`).join('')}
       </tbody></table>` : '<div class="dash-empty">No users yet.</div>'}`;
@@ -133,20 +148,73 @@ const AdminView = (() => {
     if (!username || !password) return Toast.show('User id and password required.', 'error');
     _do(() => Api.admin.createClient({ username, name: val('c-name'), password }), 'Client created.');
   }
+  function toggleAllCats(checked) {
+    document.querySelectorAll('.cat-box').forEach(cb => { cb.disabled = checked; cb.checked = checked; });
+  }
+  function _getSelectedCats() {
+    const allChecked = document.getElementById('cat-all')?.checked;
+    if (allChecked) return null;
+    return [...document.querySelectorAll('.cat-box:checked')].map(cb => cb.value);
+  }
   function createUser() {
     const username = val('u-user'), password = val('u-pass'), client_id = val('u-client');
     if (!client_id) return Toast.show('Select a client.', 'error');
     if (!username || !password) return Toast.show('User id and password required.', 'error');
-    _do(() => Api.admin.createUser({ client_id, username, password, deposit: +val('u-dep') || 0, commission_rate: +val('u-comm') || 0 }), 'User created.');
+    const cats = _getSelectedCats();
+    if (cats && cats.length === 0) return Toast.show('Select at least one category.', 'error');
+    _do(() => Api.admin.createUser({ client_id, username, password, deposit: +val('u-dep') || 0, commission_rate: +val('u-comm') || 0, allowed_categories: cats }), 'User created.');
   }
-  function credit(id) { const a = prompt('Credit amount ($):'); if (a) _do(() => Api.admin.credit(id, +a), 'Credited.'); }
-  function debit(id) { const a = prompt('Debit amount ($):'); if (a) _do(() => Api.admin.debit(id, +a), 'Debited.'); }
-  function setComm(id, cur) { const r = prompt('Commission rate (%):', cur); if (r !== null) _do(() => Api.admin.patchUser(id, { commission_rate: +r }), 'Commission updated.'); }
+  function credit(id) {
+    Modal.show('Credit user', '<div class="form-group"><label class="form-label">Amount ($)</label><input class="form-input" type="number" id="modal-input" min="0" step="0.01" placeholder="0.00"></div>', () => {
+      const a = +val('modal-input'); if (!a || a <= 0) { Toast.show('Enter a valid amount.', 'error'); return false; }
+      _do(() => Api.admin.credit(id, a), 'Credited.');
+    });
+    setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
+  }
+  function debit(id) {
+    Modal.show('Debit user', '<div class="form-group"><label class="form-label">Amount ($)</label><input class="form-input" type="number" id="modal-input" min="0" step="0.01" placeholder="0.00"></div>', () => {
+      const a = +val('modal-input'); if (!a || a <= 0) { Toast.show('Enter a valid amount.', 'error'); return false; }
+      _do(() => Api.admin.debit(id, a), 'Debited.');
+    });
+    setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
+  }
+  function setComm(id, cur) {
+    Modal.show('Set commission', `<div class="form-group"><label class="form-label">Commission rate (%)</label><input class="form-input" type="number" id="modal-input" min="0" max="100" step="0.1" value="${cur}"></div>`, () => {
+      const r = val('modal-input'); if (r === '') { Toast.show('Enter a rate.', 'error'); return false; }
+      _do(() => Api.admin.patchUser(id, { commission_rate: +r }), 'Commission updated.');
+    });
+    setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
+  }
   function toggleUser(id, st) { _do(() => Api.admin.patchUser(id, { status: st === 'active' ? 'suspended' : 'active' })); }
   function toggleClient(id, st) { _do(() => Api.admin.patchClient(id, { status: st === 'active' ? 'suspended' : 'active' })); }
-  function resetClientPw(id) { const p = prompt('New password (min 6):'); if (p) _do(() => Api.admin.patchClient(id, { password: p }), 'Password reset.'); }
+  function resetClientPw(id) {
+    Modal.show('Reset password', '<div class="form-group"><label class="form-label">New password (min 6)</label><input class="form-input" type="password" id="modal-input" placeholder="min 6 characters"></div>', () => {
+      const p = val('modal-input'); if (!p || p.length < 6) { Toast.show('Password must be at least 6 characters.', 'error'); return false; }
+      _do(() => Api.admin.patchClient(id, { password: p }), 'Password reset.');
+    });
+    setTimeout(() => document.getElementById('modal-input')?.focus(), 60);
+  }
+  function editCats(id) {
+    Api.admin.users().then(users => {
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+      const current = u.allowed_categories || ALL_CATEGORIES;
+      const html = ALL_CATEGORIES.map(c =>
+        `<label style="display:block;margin:4px 0"><input type="checkbox" value="${c}" ${current.includes(c) ? 'checked' : ''}> ${c}</label>`
+      ).join('');
+      Modal.show('Category access — ' + esc(u.username), `
+        <div id="edit-cats-form">${html}</div>
+        <label style="display:block;margin:8px 0 0"><input type="checkbox" id="edit-cats-all" ${!u.allowed_categories ? 'checked' : ''} onchange="document.querySelectorAll('#edit-cats-form input').forEach(cb=>{cb.disabled=this.checked;cb.checked=this.checked})"> All categories</label>
+      `, () => {
+        const allChecked = document.getElementById('edit-cats-all')?.checked;
+        const cats = allChecked ? null : [...document.querySelectorAll('#edit-cats-form input:checked')].map(cb => cb.value);
+        if (!allChecked && (!cats || cats.length === 0)) { Toast.show('Select at least one category.', 'error'); return false; }
+        _do(() => Api.admin.patchUser(id, { allowed_categories: cats }), 'Categories updated.');
+      });
+    });
+  }
   function approve(id) { _do(() => Api.admin.approve(id), 'Approved.'); }
   function reject(id) { _do(() => Api.admin.reject(id), 'Rejected.'); }
 
-  return { render, mount, tab, createClient, createUser, credit, debit, setComm, toggleUser, toggleClient, resetClientPw, approve, reject };
+  return { render, mount, tab, createClient, createUser, toggleAllCats, credit, debit, setComm, editCats, toggleUser, toggleClient, resetClientPw, approve, reject };
 })();
